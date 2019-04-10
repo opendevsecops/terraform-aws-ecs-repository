@@ -86,10 +86,10 @@ resource "null_resource" "task_login_with_role" {
     working_dir = "${var.source_dir}"
 
     command = <<EOF
-CONFIG=$(aws sts assume-role --role-arn ${var.assume_role_arn} --role-session-name tf-tmp --output json)
-export AWS_ACCESS_KEY_ID=$$(echo $CONFIG | jq -r .Credentials.AccessKeyId)
-export AWS_SECRET_ACCESS_KEY=$$(echo $CONFIG | jq -r .Credentials.SecretAccessKey)
-export AWS_SESSION_TOKEN=$$(echo $CONFIG | jq -r .Credentials.SessionToken)
+CONFIG=$$(aws sts assume-role --role-arn "${var.assume_role_arn}" --role-session-name tf-tmp --output json)
+export AWS_ACCESS_KEY_ID=$$(echo "$$CONFIG" | jq -r .Credentials.AccessKeyId)
+export AWS_SECRET_ACCESS_KEY=$$(echo "$$CONFIG" | jq -r .Credentials.SecretAccessKey)
+export AWS_SESSION_TOKEN=$$(echo "$$CONFIG" | jq -r .Credentials.SessionToken)
 aws ecr get-login --no-include-email --registry-ids ${var.registry_id} | /bin/sh
 EOF
   }
