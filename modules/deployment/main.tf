@@ -17,7 +17,9 @@ resource "null_resource" "task_build" {
   provisioner "local-exec" {
     working_dir = "${var.source_dir}"
 
-    command = "docker build -t ${random_string.build_name.result} ."
+    command = <<EOF
+docker build -t ${random_string.build_name.result} .
+EOF
   }
 }
 
@@ -29,7 +31,9 @@ resource "null_resource" "task_tag" {
   provisioner "local-exec" {
     working_dir = "${var.source_dir}"
 
-    command = "docker tag ${random_string.build_name.result}:latest ${var.repository_url}:latest"
+    command = <<EOF
+docker tag ${random_string.build_name.result}:latest ${var.repository_url}:latest
+EOF
   }
 
   depends_on = ["null_resource.task_build"]
@@ -46,7 +50,7 @@ resource "null_resource" "task_login" {
     working_dir = "${var.source_dir}"
 
     command = <<EOF
-  aws ecr get-login --no-include-email --registry-ids ${var.registry_id} | /bin/sh
+aws ecr get-login --no-include-email --registry-ids ${var.registry_id} | /bin/sh
 EOF
   }
 
@@ -63,7 +67,9 @@ resource "null_resource" "task_push" {
   provisioner "local-exec" {
     working_dir = "${var.source_dir}"
 
-    command = "docker push ${var.repository_url}:latest"
+    command = <<EOF
+docker push ${var.repository_url}:latest
+EOF
   }
 
   depends_on = ["null_resource.task_login"]
@@ -80,11 +86,11 @@ resource "null_resource" "task_login_with_role" {
     working_dir = "${var.source_dir}"
 
     command = <<EOF
-  CONFIG=$(aws sts assume-role --role-arn ${var.assume_role_arn} --role-session-name tf-tmp --output json)
-  export AWS_ACCESS_KEY_ID=$$(echo $CONFIG | jq -r .Credentials.AccessKeyId)
-  export AWS_SECRET_ACCESS_KEY=$$(echo $CONFIG | jq -r .Credentials.SecretAccessKey)
-  export AWS_SESSION_TOKEN=$$(echo $CONFIG | jq -r .Credentials.SessionToken)
-  aws ecr get-login --no-include-email --registry-ids ${var.registry_id} | /bin/sh
+CONFIG=$(aws sts assume-role --role-arn ${var.assume_role_arn} --role-session-name tf-tmp --output json)
+export AWS_ACCESS_KEY_ID=$$(echo $CONFIG | jq -r .Credentials.AccessKeyId)
+export AWS_SECRET_ACCESS_KEY=$$(echo $CONFIG | jq -r .Credentials.SecretAccessKey)
+export AWS_SESSION_TOKEN=$$(echo $CONFIG | jq -r .Credentials.SessionToken)
+aws ecr get-login --no-include-email --registry-ids ${var.registry_id} | /bin/sh
 EOF
   }
 
@@ -101,7 +107,9 @@ resource "null_resource" "task_push_with_role" {
   provisioner "local-exec" {
     working_dir = "${var.source_dir}"
 
-    command = "docker push ${var.repository_url}:latest"
+    command = <<EOF
+docker push ${var.repository_url}:latest
+EOF
   }
 
   depends_on = ["null_resource.task_login_with_role"]
