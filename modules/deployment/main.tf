@@ -39,24 +39,6 @@ EOF
   depends_on = ["null_resource.task_build"]
 }
 
-resource "null_resource" "task_login" {
-  count = "${var.assume_role_arn == "" ? 1 : 0}"
-
-  triggers {
-    build = "${local.build}"
-  }
-
-  provisioner "local-exec" {
-    working_dir = "${var.source_dir}"
-
-    command = <<EOF
-aws ecr get-login --no-include-email --registry-ids ${var.registry_id} | /bin/sh
-EOF
-  }
-
-  depends_on = ["null_resource.task_tag"]
-}
-
 resource "null_resource" "task_push" {
   count = "${var.assume_role_arn == "" ? 1 : 0}"
 
@@ -68,29 +50,8 @@ resource "null_resource" "task_push" {
     working_dir = "${var.source_dir}"
 
     command = <<EOF
-docker push ${var.repository_url}:latest
-EOF
-  }
-
-  depends_on = ["null_resource.task_login"]
-}
-
-resource "null_resource" "task_login_with_role" {
-  count = "${var.assume_role_arn == "" ? 0 : 1}"
-
-  triggers {
-    build = "${local.build}"
-  }
-
-  provisioner "local-exec" {
-    working_dir = "${var.source_dir}"
-
-    command = <<EOF
-CONFIG=$$(aws sts assume-role --role-arn "${var.assume_role_arn}" --role-session-name tf-tmp --output json)
-export AWS_ACCESS_KEY_ID=$$(echo "$$CONFIG" | jq -r .Credentials.AccessKeyId)
-export AWS_SECRET_ACCESS_KEY=$$(echo "$$CONFIG" | jq -r .Credentials.SecretAccessKey)
-export AWS_SESSION_TOKEN=$$(echo "$$CONFIG" | jq -r .Credentials.SessionToken)
 aws ecr get-login --no-include-email --registry-ids ${var.registry_id} | /bin/sh
+docker push ${var.repository_url}:latest
 EOF
   }
 
@@ -108,9 +69,14 @@ resource "null_resource" "task_push_with_role" {
     working_dir = "${var.source_dir}"
 
     command = <<EOF
+CONFIG=$$(aws sts assume-role --role-arn "${var.assume_role_arn}" --role-session-name tf-tmp --output json)
+export AWS_ACCESS_KEY_ID=$$(echo "$$CONFIG" | jq -r .Credentials.AccessKeyId)
+export AWS_SECRET_ACCESS_KEY=$$(echo "$$CONFIG" | jq -r .Credentials.SecretAccessKey)
+export AWS_SESSION_TOKEN=$$(echo "$$CONFIG" | jq -r .Credentials.SessionToken)
+aws ecr get-login --no-include-email --registry-ids ${var.registry_id} | /bin/sh
 docker push ${var.repository_url}:latest
 EOF
   }
 
-  depends_on = ["null_resource.task_login_with_role"]
+  depends_on = ["null_resource.task_tag"]
 }
